@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BetAnything Lotto Fireball Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0D12;
+    --purple:#5B2EFF;
+    --purple-dark:#3A1C8F;
+    --gold:#D4A017;
+    --text-2:#B8BEC9;
+  }
+  *{box-sizing:border-box;}
+  html,body{ margin:0; padding:0; height:100%; overflow:hidden; }
+  body{
+    background:
+      radial-gradient(1100px 650px at 20% -10%, rgba(91,46,255,0.16), transparent 60%),
+      radial-gradient(900px 550px at 100% 10%, rgba(58,28,143,0.22), transparent 55%),
+      var(--bg);
+    color:#fff;
+    font-family:'Plus Jakarta Sans', -apple-system, sans-serif;
+    height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+  }
+  body::before{
+    content:'';
+    position:fixed; inset:0;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity:0.035;
+    pointer-events:none;
+  }
+
+  /* Floating embers */
+  .embers{ position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:1; }
+  .ember{
+    position:absolute;
+    bottom:-20px;
+    border-radius:50%;
+    background:radial-gradient(circle, #FFD27A 0%, var(--gold) 55%, transparent 75%);
+    opacity:0;
+    animation-name:emberRise, emberFlicker;
+    animation-timing-function:linear, ease-in-out;
+    animation-iteration-count:infinite, infinite;
+  }
+  .ember.ambient{
+    bottom:auto;
+    animation-name:emberDrift, emberFlicker;
+    animation-timing-function:ease-in-out, ease-in-out;
+    animation-direction:alternate, alternate;
+  }
+  @keyframes emberRise{
+    0%{ transform:translateY(0) translateX(0); opacity:0; }
+    10%{ opacity:0.85; }
+    90%{ opacity:0.5; }
+    100%{ transform:translateY(-110vh) translateX(var(--drift, 20px)); opacity:0; }
+  }
+  @keyframes emberDrift{
+    0%{ transform:translate(0,0); opacity:var(--base-op, 0.5); }
+    100%{ transform:translate(var(--dx,24px), var(--dy,-24px)); opacity:var(--peak-op, 0.9); }
+  }
+  @keyframes emberFlicker{
+    0%,100%{ filter:brightness(1); }
+    50%{ filter:brightness(1.5); }
+  }
+
+  /* Content */
+  .content{
+    position:relative; z-index:2;
+    text-align:center;
+    padding:0 24px;
+    animation:contentIn 0.9s cubic-bezier(.2,.8,.3,1) both;
+    transition:opacity .5s ease, transform .5s ease;
+  }
+  .content.fading{ opacity:0; transform:scale(0.96); }
+  @keyframes contentIn{
+    from{ opacity:0; transform:translateY(18px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+
+  .logo-wrap{
+    width:118px; height:118px; margin:0 auto 28px;
+    display:flex; align-items:center; justify-content:center;
+    animation:logoFloat 3.2s ease-in-out infinite;
+  }
+  .logo-wrap img{
+    width:100%; height:100%; object-fit:contain;
+    filter:drop-shadow(0 0 24px rgba(212,160,23,0.35)) drop-shadow(0 8px 20px rgba(0,0,0,0.4));
+  }
+  @keyframes logoFloat{
+    0%,100%{ transform:translateY(0) rotate(0deg); }
+    50%{ transform:translateY(-10px) rotate(-3deg); }
+  }
+
+  h1{
+    font-family:'Sora', sans-serif;
+    font-size:clamp(22px, 4vw, 34px);
+    font-weight:800;
+    margin:0 0 36px;
+    letter-spacing:0.2px;
+  }
+
+  .enter-btn{
+    position:relative;
+    font-family:'Sora', sans-serif;
+    font-weight:700; font-size:15px;
+    color:#1a1400;
+    background:linear-gradient(135deg, var(--gold), #B8860B);
+    border:none; cursor:pointer;
+    padding:16px 36px;
+    border-radius:999px;
+    display:inline-flex; align-items:center; gap:10px;
+    box-shadow:0 4px 20px rgba(212,160,23,0.35);
+    transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .enter-btn:hover{ box-shadow:0 4px 30px rgba(212,160,23,0.55); transform:translateY(-2px); }
+  .enter-btn:active{ transform:translateY(0) scale(0.97); }
+  .enter-btn svg{ width:17px; height:17px; transition:transform .25s ease; }
+  .enter-btn:hover svg{ transform:translateX(3px); }
+  .enter-btn:disabled{ opacity:0.85; cursor:default; }
+
+
+  /* Burst transition overlay */
+  .burst-overlay{
+    position:fixed; inset:0; z-index:10;
+    pointer-events:none;
+    overflow:hidden;
+    clip-path:circle(0% at var(--bx) var(--by));
+    transition:clip-path .9s cubic-bezier(.22,.85,.25,1);
+  }
+  .burst-overlay.active{ clip-path:circle(150% at var(--bx) var(--by)); }
+  .burst-overlay::before{
+    content:'';
+    position:absolute; inset:-50%;
+    background:radial-gradient(circle at var(--bx) var(--by), #FFE9B0 0%, var(--gold) 20%, var(--purple) 50%, #05040a 75%);
+  }
+  .burst-overlay::after{
+    content:'';
+    position:absolute; inset:-20%;
+    background:conic-gradient(from 0deg at var(--bx) var(--by), transparent 0deg, rgba(255,255,255,0.18) 40deg, transparent 90deg, rgba(255,255,255,0.1) 200deg, transparent 260deg);
+    animation:burstSpin 1.4s linear infinite;
+    mix-blend-mode:overlay;
+  }
+  @keyframes burstSpin{ from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
+
+  /* Shockwave ring */
+  .shock-ring{
+    position:fixed; z-index:11; pointer-events:none;
+    left:var(--bx); top:var(--by);
+    width:20px; height:20px;
+    border-radius:50%;
+    border:2px solid rgba(255,233,176,0.9);
+    box-shadow:0 0 24px rgba(212,160,23,0.6);
+    transform:translate(-50%,-50%) scale(0);
+    opacity:1;
+    transition:transform .7s cubic-bezier(.15,.75,.3,1), opacity .7s ease;
+  }
+  .shock-ring.go{ transform:translate(-50%,-50%) scale(38); opacity:0; }
+
+  /* Spark particles */
+  .spark{
+    position:fixed; z-index:11; pointer-events:none;
+    left:var(--bx); top:var(--by);
+    width:6px; height:6px;
+    border-radius:50%;
+    background:radial-gradient(circle, #FFEFC2 0%, var(--gold) 60%, transparent 80%);
+    transform:translate(-50%,-50%) scale(1);
+    opacity:1;
+    transition:transform .65s cubic-bezier(.15,.7,.25,1), opacity .65s ease;
+  }
+  .spark.go{
+    transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.2);
+    opacity:0;
+  }
+</style>
+</head>
+<body>
+
+<div class="embers" id="embers"></div>
+
+<div class="content" id="content">
+  <div class="logo-wrap"><img src="logo-icon.png" alt="BetAnything"></div>
+  <h1>BetAnything Lotto Fireball Calculator</h1>
+  <button class="enter-btn" id="enterBtn">
+    <span>Enter Calculator</span>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+  </button>
+</div>
+
+<div class="burst-overlay" id="burstOverlay"></div>
+
+<script>
+  // Generate rising embers
+  const embersContainer = document.getElementById('embers');
+  const RISE_COUNT = 26;
+  for (let i = 0; i < RISE_COUNT; i++) {
+    const ember = document.createElement('div');
+    ember.className = 'ember';
+    const size = 3 + Math.random() * 5;
+    const left = Math.random() * 100;
+    const duration = 6 + Math.random() * 6;
+    const delay = Math.random() * 10;
+    const drift = (Math.random() * 60 - 30) + 'px';
+    ember.style.width = size + 'px';
+    ember.style.height = size + 'px';
+    ember.style.left = left + '%';
+    ember.style.setProperty('--drift', drift);
+    ember.style.animationDuration = duration + 's, ' + (1.5 + Math.random()) + 's';
+    ember.style.animationDelay = delay + 's, 0s';
+    embersContainer.appendChild(ember);
+  }
+
+  // Generate ambient scattered embers (present across the whole screen, gently drifting)
+  const AMBIENT_COUNT = 55;
+  for (let i = 0; i < AMBIENT_COUNT; i++) {
+    const ember = document.createElement('div');
+    ember.className = 'ember ambient';
+    const size = 2 + Math.random() * 6;
+    const top = Math.random() * 100;
+    const left = Math.random() * 100;
+    const dx = (Math.random() * 50 - 25) + 'px';
+    const dy = (Math.random() * 50 - 25) + 'px';
+    const baseOp = 0.25 + Math.random() * 0.35;
+    const peakOp = 0.6 + Math.random() * 0.4;
+    const driftDuration = 3 + Math.random() * 5;
+    const flickerDuration = 1 + Math.random() * 2;
+    ember.style.width = size + 'px';
+    ember.style.height = size + 'px';
+    ember.style.top = top + '%';
+    ember.style.left = left + '%';
+    ember.style.setProperty('--dx', dx);
+    ember.style.setProperty('--dy', dy);
+    ember.style.setProperty('--base-op', baseOp);
+    ember.style.setProperty('--peak-op', peakOp);
+    ember.style.animationDuration = driftDuration + 's, ' + flickerDuration + 's';
+    ember.style.animationDelay = (Math.random() * 3) + 's, 0s';
+    embersContainer.appendChild(ember);
+  }
+
+  // Enter transition
+  const enterBtn = document.getElementById('enterBtn');
+  const content = document.getElementById('content');
+  const burstOverlay = document.getElementById('burstOverlay');
+  const DESTINATION = 'calculator.html';
+  const SPARK_COUNT = 20;
+
+  function spawnBurstEffects(bx, by){
+    // Shockwave ring
+    const ring = document.createElement('div');
+    ring.className = 'shock-ring';
+    ring.style.setProperty('--bx', bx);
+    ring.style.setProperty('--by', by);
+    document.body.appendChild(ring);
+    requestAnimationFrame(() => ring.classList.add('go'));
+    setTimeout(() => ring.remove(), 800);
+
+    // Spark burst
+    for (let i = 0; i < SPARK_COUNT; i++) {
+      const spark = document.createElement('div');
+      spark.className = 'spark';
+      spark.style.setProperty('--bx', bx);
+      spark.style.setProperty('--by', by);
+      const angle = (Math.PI * 2 * i) / SPARK_COUNT + (Math.random() * 0.4 - 0.2);
+      const distance = 90 + Math.random() * 180;
+      spark.style.setProperty('--dx', Math.cos(angle) * distance + 'px');
+      spark.style.setProperty('--dy', Math.sin(angle) * distance + 'px');
+      document.body.appendChild(spark);
+      requestAnimationFrame(() => spark.classList.add('go'));
+      setTimeout(() => spark.remove(), 750);
+    }
+  }
+
+  enterBtn.addEventListener('click', () => {
+    enterBtn.disabled = true;
+    const rect = enterBtn.getBoundingClientRect();
+    const bx = ((rect.left + rect.width / 2) / window.innerWidth) * 100 + '%';
+    const by = ((rect.top + rect.height / 2) / window.innerHeight) * 100 + '%';
+    burstOverlay.style.setProperty('--bx', bx);
+    burstOverlay.style.setProperty('--by', by);
+
+    content.classList.add('fading');
+    spawnBurstEffects(bx, by);
+    requestAnimationFrame(() => {
+      burstOverlay.classList.add('active');
+    });
+
+    setTimeout(() => {
+      window.location.href = DESTINATION;
+    }, 850);
+  });
+</script>
+
+</body>
+</html>
